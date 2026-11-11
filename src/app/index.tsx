@@ -1,8 +1,16 @@
-import * as Device from 'expo-device';
-import {SafeAreaView, StyleSheet, Text, View, Alert, FlatList, ActivityIndicator, Switch,RefreshControl } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import MovieCard, {Movie}  from '@/components/MovieCard';
-import React, { useEffect, useState } from 'react';
+import MovieCard, { Movie } from '@/components/MovieCard';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  SafeAreaView,
+  StyleSheet,
+  Switch,
+  Text,
+  View
+} from 'react-native';
 
 const API_URL = 'https://6abb5bd9b2118ed7abb855bf.mockapi.io/movies';
 
@@ -12,11 +20,8 @@ export default function HomeScreen() {
   const [isTile, setIsTile] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Số cột: Nếu isTile bật thì 2 cột, ngược lại 1 cột
   const numColumns = isTile ? 2 : 1;
-
-  
-
-
 
   const fetchMovies = async () => {
     try {
@@ -32,128 +37,108 @@ export default function HomeScreen() {
       setLoading(false);
     }
   };
+
   const handleRefresh = async () => {
     try {
-      setRefreshing(true);
+    setRefreshing(true);
       const response = await fetch(API_URL);
       if (!response.ok) {
         throw new Error('Không thể lấy danh sách phim');
       }
       const data: Movie[] = await response.json();
       setMovies(data);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Giả lập độ trễ 1.5s để thấy hiệu ứng loading
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
     } catch (error) {
       console.error('Refresh error:', error);
     } finally {
       setRefreshing(false);
     }
   };
-  
-  
 
-  useEffect(() => {fetchMovies();}, []);
+  useEffect(() => {
+    fetchMovies();
+  }, []);
+
   const handleSelect = (id: string) => {
-    const movie = movies.find(
-      (item) => item.id === id
-    );
-
+    const movie = movies.find((item) => item.id === id);
     if (movie) {
       Alert.alert('Movie', movie.title);
     }
   };
+
   return (
-    
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
+    // Đã bỏ SafeAreaProvider, chỉ giữ SafeAreaView
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Movie App</Text>
           <View style={styles.switchContainer}>
             <Text>Dạng lưới</Text>
-            <Switch value={isTile}  onValueChange={setIsTile} />
+            <Switch value={isTile} onValueChange={setIsTile} />
           </View>
-        </View>              
-          {loading ? (
-            <ActivityIndicator size="large" style={styles.loading}/>
-          ) : (
-            
-            <FlatList key={String(numColumns)} data={movies} keyExtractor={(item) => String(item.id)} numColumns={numColumns}
-              renderItem={({ item }) => (
-                <MovieCard
-                  key={String(item.id)}
-                  movie={item}
-                  layout={isTile ? 'tile' : 'row'}
-                  onSelect={handleSelect}
-                />
-              )}
-              columnWrapperStyle={
-                isTile ? styles.columnWrapper : undefined
-              }
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handleRefresh}
-                />
-              }
-            />
-          )}
-
         </View>
-        
-      </SafeAreaView>
-    </SafeAreaProvider>
+
+        {/* Danh sách phim */}
+        {loading ? (
+          <ActivityIndicator size="large" style={styles.loading} />
+        ) : (
+          <FlatList
+            key={String(numColumns)} // Ép render lại khi đổi layout
+            data={movies}
+            // FIX LỖI TRÙNG KEY: Dùng item.id, nếu không có thì dùng index
+            keyExtractor={(item, index) => item.id ? String(item.id) : String(index)}
+            numColumns={numColumns}
+            renderItem={({ item }) => (
+              <MovieCard
+                // Đã xóa key={String(item.id)} ở đây vì bị thừa
+                movie={item}
+                layout={isTile ? 'tile' : 'row'}
+                onSelect={handleSelect}
+              />
+            )}
+            // FIX LỖI GIAO DIỆN: Chỉ dùng columnWrapperStyle khi có nhiều hơn 1 cột
+            columnWrapperStyle={isTile && numColumns > 1 ? styles.columnWrapper : undefined}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+              />
+            }
+            // Thêm padding bottom để danh sách không bị che
+            contentContainerStyle={{ paddingBottom: 20 }}
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#fff',
   },
-
   container: {
     flex: 1,
     padding: 16,
   },
-
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
   loading: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  movieItem: {
-    padding: 16,
-    marginBottom: 12,
-    borderRadius: 10,
-    backgroundColor: '#f2f2f2',
-  },
-  rating: {
-    fontSize: 16,
-    marginTop: 8,
-  },
-
-  status: {
-    fontSize: 15,
-    marginTop: 5,
-  },
-
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
   },
-  
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
   },
-  
   switchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
